@@ -92,13 +92,14 @@ def properties_from_cwl_param(cwl_p):
         properties["multipleValues"] = "True"
     if hasattr(cwl_p, "default"):
         try:
-            default_type = cwl_p.default["class"]
-        except (TypeError, KeyError):
+            default_type = cwl_p.default.class_
+        except AttributeError:
             if not is_structured(cwl_p.type) and cwl_p.default is not None:
                 properties["defaultValue"] = str(cwl_p.default)
         else:
             if default_type in ("File", "Directory"):
-                default = cwl_p.default.get("location", cwl_p.default.get("path"))
+                default = getattr(cwl_p.default, "location",
+                                  getattr(cwl_p.default, "path", None))
                 if default:
                     properties["defaultValue"] = default
         # TODO: support more cases
@@ -157,7 +158,7 @@ def get_workflow(wf_path):
         ns = n.pop("$namespaces", {})
         if ns:
             json_wf.setdefault("$namespaces", {}).update(ns)
-    defs = load_document_by_yaml(json_wf, wf_path.absolute().as_uri())
+    defs = load_document_by_yaml(json_wf, wf_path.absolute().as_uri(), load_all=True)
     if not isinstance(defs, list):
         defs = [defs]
     def_map = {}
